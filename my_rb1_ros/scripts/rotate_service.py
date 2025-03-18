@@ -13,6 +13,7 @@ class RotateService :
         self.k_p = 0.5 
         self.rotate_cmd = Twist()
         self.current_yaw = 0.0 
+        self.yaw_before_rotation = 0.0 
         self.rate = rospy.Rate(20)
         self.ctrl_c = False
         self.rotate_publisher = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
@@ -41,17 +42,23 @@ class RotateService :
         #stop the robot after rotation
         self.stop_rb1()
 
-        #test if the rotation was successful or not 
-        self.response.result = "Rotation successful"
+        # test if the rotation was successful or not
+        # if the robot has turned the requested degrees or not 
+        target_angle_rad = (math.radians(request.degrees) + math.pi) % (2 * math.pi) - math.pi # normalize big angles to the range [-pi, pi] 
+        if abs(self.current_yaw - target_angle_rad - self.yaw_before_rotation) < 0.1 :
+            self.response.result = "Rotation successful"
+        else :
+            self.response.result = "Rotation not successful"
         return self.response
 
     # Compute the duration necessary for the robot to reach desired angle
     # then rotate the robot around z-axis for that duration
     def rotate_rb1(self, target_degrees):
         rospy.loginfo ("Rotation function called")
-        target_rad = self.current_yaw + (target_degrees * math.pi / 180) 
+        self.yaw_before_rotation = self.current_yaw
+        target_rad = self.yaw_before_rotation + (target_degrees * math.pi / 180) 
 
-        angle_diff = target_rad - self.current_yaw
+        angle_diff = target_rad - self.yaw_before_rotation
         
         # Rotate robot using cmd_vel messages
         self.rotate_cmd.linear.x = 0  # ensure there are not drifting velocities
@@ -60,7 +67,6 @@ class RotateService :
 
         # Duration to rotate (time = angle / angular speed)
         duration = abs(angle_diff) / abs (self.rotate_cmd.angular.z)
-
 
         # Rotate until the target angle is reached
         start_time = rospy.get_time()
