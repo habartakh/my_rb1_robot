@@ -13,7 +13,7 @@ class RotateService :
         self.k_p = 0.5 
         self.rotate_cmd = Twist()
         self.current_yaw = 0.0 
-        self.rate = rospy.Rate(10)
+        self.rate = rospy.Rate(20)
         self.ctrl_c = False
         self.rotate_publisher = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
         self.odom_subscriber = rospy.Subscriber('/odom', Odometry, self.odometry_callback )
@@ -40,32 +40,40 @@ class RotateService :
 
         #stop the robot after rotation
         self.stop_rb1()
+
+        #test if the rotation was successful or not 
         self.response.result = "Rotation successful"
         return self.response
-        
-    def rotate_rb1 (self, target_degrees):
+
+    # Compute the duration necessary for the robot to reach desired angle
+    # then rotate the robot around z-axis for that duration
+    def rotate_rb1(self, target_degrees):
         rospy.loginfo ("Rotation function called")
         target_rad = self.current_yaw + (target_degrees * math.pi / 180) 
-        
-        # Calculate the difference in yaw
+
         angle_diff = target_rad - self.current_yaw
         
         # Rotate robot using cmd_vel messages
         self.rotate_cmd.linear.x = 0  # ensure there are not drifting velocities
         self.rotate_cmd.linear.y = 0 
-        self.rotate_cmd.angular.z = 0.1 if angle_diff > 0 else -0.1
+        self.rotate_cmd.angular.z = 0.35 if angle_diff > 0 else -0.35
 
-        # Start rotating until the target angle is reached
-        while abs(angle_diff) > 0.1:  # threshold
+        # Duration to rotate (time = angle / angular speed)
+        duration = abs(angle_diff) / abs (self.rotate_cmd.angular.z)
+
+
+        # Rotate until the target angle is reached
+        start_time = rospy.get_time()
+
+        while rospy.get_time() - start_time < duration:
             self.publish_once_in_cmd_vel(self.rotate_cmd)
-            self.rate.sleep()
-            angle_diff = target_rad - self.current_yaw
-
-        
+            self.rate.sleep()      
 
 
     def stop_rb1(self):
         # stop the rotation of the robot
+        self.rotate_cmd.linear.x = 0 
+        self.rotate_cmd.linear.y = 0 
         self.rotate_cmd.angular.z = 0
         self.publish_once_in_cmd_vel(self.rotate_cmd)
         rospy.loginfo("Robot stopped")
@@ -81,7 +89,7 @@ class RotateService :
             # print("connections : ", connections)
             if connections > 0:
                 self.rotate_publisher.publish(cmd)
-                rospy.loginfo("Cmd Published")
+                # rospy.loginfo("Cmd Published")
                 break
             else:
                 self.rate.sleep()
