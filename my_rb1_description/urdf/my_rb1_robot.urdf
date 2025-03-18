@@ -293,7 +293,7 @@
         <wheelAcceleration>1.0</wheelAcceleration>
 
         <!-- Maximum torque which the wheels can produce, in Nm, defaults to 5 Nm -->
-        <wheelTorque>0.01137498</wheelTorque> <!-- torque = moment_of_inertia*angular_speed = iyy* speed / radius -->
+        <wheelTorque>0.1137498</wheelTorque> <!-- torque = moment_of_inertia*angular_speed = iyy* speed / radius -->
 
         <!-- Topic to receive geometry_msgs/Twist message commands, defaults to `cmd_vel` -->
         <commandTopic>cmd_vel</commandTopic>
